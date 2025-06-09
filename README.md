@@ -1,56 +1,95 @@
-# Advanced Challenge
+# Food Ordering API Server
 
-Build an API server implementing our OpenAPI spec for food ordering API in [Go](https://go.dev).\
-You can find our [API Documentation](https://orderfoodonline.deno.dev/public/openapi.html) here.
+This project implements a backend API server for a food ordering system using Go and the Fiber framework. It includes modules for managing products, orders, and a robust promo code validation system capable of handling large datasets.
 
-API documentation is based on [OpenAPI3.1](https://swagger.io/specification/v3/) specification.
-You can also find spec file [here](https://orderfoodonline.deno.dev/public/openapi.yaml).
+## Table of Contents
 
-> The API immplementation example available to you at orderfoodonline.deno.dev/api is simplified and doesn't handle some edge cases intentionally.
-> Use your best judgement to build a Robust API server.
+* [Features](#features)
+* [Project Structure](#project-structure)
+* [Getting Started](#getting-started)
+    * [Prerequisites](#prerequisites)
+    * [Local Setup](#local-setup)
+    * [Environment Variables](#environment-variables)
+    * [Running the Application](#running-the-application)
+* [API Endpoints](#api-endpoints)
+    * [OpenAPI Documentation](#openapi-documentation)
+    * [Promo Code Validation](#promo-code-validation)
+    * [Products](#products)
+    * [Orders](#orders)
+    * [Debug Endpoints](#debug-endpoints)
+* [Running Tests](#running-tests)
+* [Promo Code Data Handling](#promo-code-data-handling)
 
-## Basic Requirements
+## Features
 
-- Implement all APIs described in the OpenAPI specification
-- Conform to the OpenAPI specification as close to as possible
-- Implement all features our [demo API server](https://orderfoodonline.deno.dev) has implemented
-- Validate promo code according to promo code validation logic described below
+* **API Implementation:** Comprehensive API for product listing, order creation, and promo code validation.
+* **Promo Code Validation:** Validates promo codes based on length (8-10 characters) and presence in at least two source files.
+* **Efficient Large File Processing:** Utilizes streaming decompression to temporary disk files and batched aggregation for promo codes, minimizing memory footprint during initial load.
+* **Flexible Data Storage:** Supports in-memory storage for promo codes (for development/smaller datasets) and can be switched to PostgreSQL for production-scale data.
+* **Clean Architecture:** Structured using `cmd/`, `pkg/`, and `internal/` for clear separation of concerns, maintainability, and scalability.
+* **Fiber Framework:** High-performance HTTP server built with Fiber.
+* **Graceful Shutdown:** Ensures proper cleanup on application termination.
 
-### Promo Code Validation
-
-You will find three big files containing random text in this repositotory.\
-A promo code is valid if the following rules apply:
-
-1. Must be a string of length between 8 and 10 characters
-2. It can be found in **at least two** files
-
-> Files containing valid coupons are couponbase1.gz, couponbase2.gz and couponbase3.gz
-
-You can download the files from here
-
-[file 1](https://orderfoodonline-files.s3.ap-southeast-2.amazonaws.com/couponbase1.gz)
-[file 2](https://orderfoodonline-files.s3.ap-southeast-2.amazonaws.com/couponbase2.gz)
-[file 3](https://orderfoodonline-files.s3.ap-southeast-2.amazonaws.com/couponbase3.gz)
-
-**Example Promo Codes**
-
-Valid promo codes
-
-- HAPPYHRS
-- FIFTYOFF
-
-Invalid promo codes
-
-- SUPER100
-
-> [!TIP]
-> it should be noted that there are more valid and invalid promo codes that those shown above.
+## Project Structure
 
 ## Getting Started
 
-You might need to configure Git LFS to clone this repository\
-https://github.com/oolio-group/kart-challenge/tree/advanced-challenge/backend-challenge
+### Prerequisites
 
-1. Use this repository as a template and create a new repository in your account
-2. Start coding
-3. Share your repository
+* **Go:** Version 1.16 or higher.
+* **Git:** For cloning the repository.
+* **PostgreSQL (Optional but Recommended for Production Scale):** If you plan to use the database backend for promo codes.
+
+### Local Setup
+
+1.  **Clone the repository:**
+    ```bash
+    git clone <repository_url> kart-challenge
+    cd kart-challenge
+    ```
+2.  **Initialize Go modules:**
+    ```bash
+    go mod tidy
+    ```
+3.  **Create necessary directories:**
+    ```bash
+    mkdir -p public local_coupons
+    ```
+4.  **Download OpenAPI Specification Files:**
+    The API documentation is served statically. Download these files and place them in the `public/` directory:
+    ```bash
+    curl -o public/openapi.html https://orderfoodonline.deno.dev/public/openapi.html
+    curl -o public/openapi.yaml https://orderfoodonline.deno.dev/public/openapi.yaml
+    ```
+5.  **Download Local Coupon Files (Optional - for faster development setup):**
+    To avoid slow remote downloads during development, you can pre-download the coupon `.gz` files and place them in the `local_coupons/` directory:
+    ```bash
+    curl -o local_coupons/couponbase1.gz https://orderfoodonline-files.s3.ap-southeast-2.amazonaws.com/couponbase1.gz
+    curl -o local_coupons/couponbase2.gz https://orderfoodonline-files.s3.ap-southeast-2.amazonaws.com/couponbase2.gz
+    curl -o local_coupons/couponbase3.gz https://orderfoodonline-files.s3.ap-southeast-2.amazonaws.com/couponbase3.gz
+    ```
+
+### Environment Variables
+
+Create a `.env` file in the project root (`kart-challenge/.env`) and set the following variables. These will be loaded by the application.
+
+```env
+# Application environment: "development" or "production"
+APP_ENV=development
+
+# Port for the Fiber server to listen on
+PORT=8080
+
+# Path to local .gz coupon files (if APP_ENV is development)
+LOCAL_COUPON_DIR=./local_coupons
+
+# Maximum size for decompressed temporary files in MB (e.g., 1024 for 1GB)
+MAX_FILE_SIZE_MB=1024
+
+# Set to 'true' to use PostgreSQL for promo code storage, 'false' for in-memory
+USE_DATABASE=false
+
+# PostgreSQL connection string (only required if USE_DATABASE is true)
+# Example: postgres://user:password@localhost:5432/mydatabase?sslmode=disable
+# Make sure to replace user, password, host, port, and dbname with your actual PostgreSQL credentials.
+DATABASE_URL="postgres://your_user:your_password@localhost:5432/your_database_name?sslmode=disable"
